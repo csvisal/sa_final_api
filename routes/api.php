@@ -9,3 +9,8 @@ Route::get('/user', function (Request $request) {
 
 include 'admin/branch.php';
 include 'admin/category.php';
+include 'admin/position.php';
+include 'admin/staff.php';
+include 'admin/product.php';
+include 'admin/invoice.php';
+include 'admin/invoice_item.php';

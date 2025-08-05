@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
+use App\Models\Position;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class CategoryController extends Controller
+class PositionController extends Controller
 {
     /**
     * @OA\Get(
-    *   path="/api/category/lists",
-    *   tags={"Category"},
-    *   summary="Fetch all Categories",
+    *   path="/api/position/lists",
+    *   tags={"Position"},
+    *   summary="Fetch all Positions",
     *   @OA\Response(
     *       response=200,
     *       description="Successful operation"
@@ -20,31 +20,33 @@ class CategoryController extends Controller
     * )
     */
     public function lists(Request $request) {
-        $category_data = Category::all();
-        return response()->json($category_data);
+        $position_data = Position::all();
+        return response()->json($position_data);
     }
 
     /**
      * @OA\Post(
-     *     path="/api/category/create",
-     *     summary="Create new Category",
-     *     tags={"Category"},
+     *     path="/api/position/create",
+     *     summary="Create new Position",
+     *     tags={"Position"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"name"},
-     *             @OA\Property(property="name", type="string", maxLength=255, example="Electronics"),
-     *             @OA\Property(property="description", type="string", example="Electronic devices")
+     *             required={"branch_id", "name"},
+     *             @OA\Property(property="branch_id", type="integer", example=1),
+     *             @OA\Property(property="name", type="string", maxLength=255, example="Manager"),
+     *             @OA\Property(property="description", type="string", example="Store manager position")
      *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Category created successfully",
+     *         description="Position created successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="Category created successfully"),
+     *             @OA\Property(property="status", type="string", example="Position created successfully"),
      *             @OA\Property(
-     *                 property="new_category",
+     *                 property="new_position",
      *                 type="object",
+     *                 @OA\Property(property="branch_id", type="integer"),
      *                 @OA\Property(property="name", type="string"),
      *                 @OA\Property(property="description", type="string")
      *             ),
@@ -60,9 +62,9 @@ class CategoryController extends Controller
      *                 property="errors",
      *                 type="object",
      *                 @OA\Property(
-     *                     property="name",
+     *                     property="branch_id",
      *                     type="array",
-     *                     @OA\Items(type="string", example="The name field is required.")
+     *                     @OA\Items(type="string", example="The branch_id field is required.")
      *                 )
      *             ),
      *             @OA\Property(property="status_code", type="integer", example=422)
@@ -72,7 +74,8 @@ class CategoryController extends Controller
      */
     public function create(Request $request) {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|unique:category|max:255',
+            'branch_id' => 'required|exists:branch,id',
+            'name' => 'required|max:255',
             'description' => 'nullable'
         ]);
 
@@ -84,79 +87,82 @@ class CategoryController extends Controller
             ], 422);
         }
 
-        $category = new Category();
-        $category->name = $request->name;
-        $category->description = $request->description;
-        $category->save();
+        $position = new Position();
+        $position->branch_id = $request->branch_id;
+        $position->name = $request->name;
+        $position->description = $request->description;
+        $position->save();
 
         return response()->json([
-            'status' => 'Category created successfully',
-            'new_category' => $category,
+            'status' => 'Position created successfully',
+            'new_position' => $position,
             'status_code' => 200
         ]);
     }
 
     /**
     * @OA\Post(
-    *     path="/api/category/update",
-    *     summary="Update Category",
-    *     tags={"Category"},
+    *     path="/api/position/update",
+    *     summary="Update Position",
+    *     tags={"Position"},
     *     @OA\RequestBody(
     *         required=true,
     *         @OA\JsonContent(
-    *             required={"id", "name"},
+    *             required={"id", "branch_id", "name"},
     *             @OA\Property(property="id", type="integer", example=1),
-    *             @OA\Property(property="name", type="string", maxLength=255, example="Updated Category"),
+    *             @OA\Property(property="branch_id", type="integer", example=1),
+    *             @OA\Property(property="name", type="string", maxLength=255, example="Updated Position"),
     *             @OA\Property(property="description", type="string", example="Updated description")
     *         )
     *     ),
     *     @OA\Response(
     *         response=200,
-    *         description="Category updated successfully",
+    *         description="Position updated successfully",
     *         @OA\JsonContent(
     *             @OA\Property(property="status", type="string", example="Update Complete"),
-    *             @OA\Property(property="updated_category", type="object"),
+    *             @OA\Property(property="updated_position", type="object"),
     *             @OA\Property(property="status_code", type="integer", example=200)
     *         )
     *     ),
     *     @OA\Response(
     *         response=500,
-    *         description="Category not found",
+    *         description="Position not found",
     *         @OA\JsonContent(
-    *             @OA\Property(property="status", type="string", example="Category not found"),
+    *             @OA\Property(property="status", type="string", example="Position not found"),
     *             @OA\Property(property="status_code", type="integer", example=500),
-    *             @OA\Property(property="all_current_category", type="array", @OA\Items(type="object"))
+    *             @OA\Property(property="all_current_position", type="array", @OA\Items(type="object"))
     *         )
     *     )
     * )
     */
     public function update(Request $request) {
-        $all_category_data = Category::select('id','name','description')->get();
-        $category = Category::find($request->id);
+        $all_position_data = Position::select('id','branch_id','name','description')->get();
+        $position = Position::find($request->id);
 
-        if ($category != null) {
-            $category->name = $request->name;
-            $category->description = $request->description;
-            $category->save();
+        if ($position != null) {
+            $position->branch_id = $request->branch_id;
+            $position->name = $request->name;
+            $position->description = $request->description;
+            $position->save();
             return response()->json([
                 'status' => 'Update Complete',
-                'updated_category' => $category,
+                'updated_position' => $position,
                 'status_code' => 200
             ]);
         } else {
             return response()->json([
-                'status' => 'Category not found',
+                'status' => 'Position not found',
                 'status_code' => 500,
-                'all_current_category' => $all_category_data
+                'all_current_position' => $all_position_data
             ]);
         }
     }
 
     /**
     * @OA\Post(
-    *     path="/api/category/delete",
-    *     summary="Delete a category",
-    *     tags={"Category"},
+    *     path="/api/position/delete",
+    *     summary="Delete a position",
+    *     tags={"Position"},
     *     @OA\RequestBody(
     *         required=true,
     *         @OA\JsonContent(
@@ -166,14 +172,15 @@ class CategoryController extends Controller
     *     ),
     *     @OA\Response(
     *         response=200,
-    *         description="Category deleted successfully",
+    *         description="Position deleted successfully",
     *         @OA\JsonContent(
     *             @OA\Property(property="status", type="string", example="Delete Complete"),
     *             @OA\Property(property="status_code", type="integer", example=200),
     *             @OA\Property(
-    *                 property="deleted_category",
+    *                 property="deleted_position",
     *                 type="object",
     *                 @OA\Property(property="id", type="integer"),
+    *                 @OA\Property(property="branch_id", type="integer"),
     *                 @OA\Property(property="name", type="string"),
     *                 @OA\Property(property="description", type="string")
     *             )
@@ -181,16 +188,17 @@ class CategoryController extends Controller
     *     ),
     *     @OA\Response(
     *         response=500,
-    *         description="Category not found",
+    *         description="Position not found",
     *         @OA\JsonContent(
-    *             @OA\Property(property="status", type="string", example="Category not found"),
+    *             @OA\Property(property="status", type="string", example="Position not found"),
     *             @OA\Property(property="status_code", type="integer", example=500),
     *             @OA\Property(
-    *                 property="all_current_category",
+    *                 property="all_current_position",
     *                 type="array",
     *                 @OA\Items(
     *                     type="object",
     *                     @OA\Property(property="id", type="integer"),
+    *                     @OA\Property(property="branch_id", type="integer"),
     *                     @OA\Property(property="name", type="string"),
     *                     @OA\Property(property="description", type="string")
     *                 )
@@ -200,21 +208,21 @@ class CategoryController extends Controller
     * )
     */
     public function delete(Request $request) {
-        $category = Category::find($request->id);
-        $all_category = Category::select('id', 'name', 'description');
-        if ($category != null) {
-            $deleted_category = $category->only(['id','name','description']);
-            $category->delete();
+        $position = Position::find($request->id);
+        $all_position = Position::select('id', 'branch_id', 'name', 'description');
+        if ($position != null) {
+            $deleted_position = $position->only(['id','branch_id','name','description']);
+            $position->delete();
             return response()->json([
                 'status' => 'Delete Complete',
                 'status_code' => 200,
-                'deleted_category' => $deleted_category
+                'deleted_position' => $deleted_position
             ]);
         } else {
             return response()->json([
-                'status' => 'Category not found',
+                'status' => 'Position not found',
                 'status_code' => 500,
-                'all_current_category' => $all_category
+                'all_current_position' => $all_position
             ]);
         }
     }

@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
+use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class CategoryController extends Controller
+class InvoiceController extends Controller
 {
     /**
     * @OA\Get(
-    *   path="/api/category/lists",
-    *   tags={"Category"},
-    *   summary="Fetch all Categories",
+    *   path="/api/invoice/lists",
+    *   tags={"Invoice"},
+    *   summary="Fetch all Invoices",
     *   @OA\Response(
     *       response=200,
     *       description="Successful operation"
@@ -20,33 +20,33 @@ class CategoryController extends Controller
     * )
     */
     public function lists(Request $request) {
-        $category_data = Category::all();
-        return response()->json($category_data);
+        $invoice_data = Invoice::all();
+        return response()->json($invoice_data);
     }
 
     /**
      * @OA\Post(
-     *     path="/api/category/create",
-     *     summary="Create new Category",
-     *     tags={"Category"},
+     *     path="/api/invoice/create",
+     *     summary="Create new Invoice",
+     *     tags={"Invoice"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"name"},
-     *             @OA\Property(property="name", type="string", maxLength=255, example="Electronics"),
-     *             @OA\Property(property="description", type="string", example="Electronic devices")
+     *             required={"user_id", "total"},
+     *             @OA\Property(property="user_id", type="integer", example=1),
+     *             @OA\Property(property="total", type="number", format="float", example=99.99)
      *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Category created successfully",
+     *         description="Invoice created successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="Category created successfully"),
+     *             @OA\Property(property="status", type="string", example="Invoice created successfully"),
      *             @OA\Property(
-     *                 property="new_category",
+     *                 property="new_invoice",
      *                 type="object",
-     *                 @OA\Property(property="name", type="string"),
-     *                 @OA\Property(property="description", type="string")
+     *                 @OA\Property(property="user_id", type="integer"),
+     *                 @OA\Property(property="total", type="number", format="float")
      *             ),
      *             @OA\Property(property="status_code", type="integer", example=200)
      *         )
@@ -60,9 +60,9 @@ class CategoryController extends Controller
      *                 property="errors",
      *                 type="object",
      *                 @OA\Property(
-     *                     property="name",
+     *                     property="user_id",
      *                     type="array",
-     *                     @OA\Items(type="string", example="The name field is required.")
+     *                     @OA\Items(type="string", example="The user_id field is required.")
      *                 )
      *             ),
      *             @OA\Property(property="status_code", type="integer", example=422)
@@ -72,8 +72,8 @@ class CategoryController extends Controller
      */
     public function create(Request $request) {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|unique:category|max:255',
-            'description' => 'nullable'
+            'user_id' => 'required|exists:users,id',
+            'total' => 'required|numeric|min:0'
         ]);
 
         if ($validator->fails()) {
@@ -84,79 +84,79 @@ class CategoryController extends Controller
             ], 422);
         }
 
-        $category = new Category();
-        $category->name = $request->name;
-        $category->description = $request->description;
-        $category->save();
+        $invoice = new Invoice();
+        $invoice->user_id = $request->user_id;
+        $invoice->total = $request->total;
+        $invoice->save();
 
         return response()->json([
-            'status' => 'Category created successfully',
-            'new_category' => $category,
+            'status' => 'Invoice created successfully',
+            'new_invoice' => $invoice,
             'status_code' => 200
         ]);
     }
 
     /**
     * @OA\Post(
-    *     path="/api/category/update",
-    *     summary="Update Category",
-    *     tags={"Category"},
+    *     path="/api/invoice/update",
+    *     summary="Update Invoice",
+    *     tags={"Invoice"},
     *     @OA\RequestBody(
     *         required=true,
     *         @OA\JsonContent(
-    *             required={"id", "name"},
+    *             required={"id", "user_id", "total"},
     *             @OA\Property(property="id", type="integer", example=1),
-    *             @OA\Property(property="name", type="string", maxLength=255, example="Updated Category"),
-    *             @OA\Property(property="description", type="string", example="Updated description")
+    *             @OA\Property(property="user_id", type="integer", example=1),
+    *             @OA\Property(property="total", type="number", format="float", example=149.99)
     *         )
     *     ),
     *     @OA\Response(
     *         response=200,
-    *         description="Category updated successfully",
+    *         description="Invoice updated successfully",
     *         @OA\JsonContent(
     *             @OA\Property(property="status", type="string", example="Update Complete"),
-    *             @OA\Property(property="updated_category", type="object"),
+    *             @OA\Property(property="updated_invoice", type="object"),
     *             @OA\Property(property="status_code", type="integer", example=200)
     *         )
     *     ),
     *     @OA\Response(
     *         response=500,
-    *         description="Category not found",
+    *         description="Invoice not found",
     *         @OA\JsonContent(
-    *             @OA\Property(property="status", type="string", example="Category not found"),
+    *             @OA\Property(property="status", type="string", example="Invoice not found"),
     *             @OA\Property(property="status_code", type="integer", example=500),
-    *             @OA\Property(property="all_current_category", type="array", @OA\Items(type="object"))
+    *             @OA\Property(property="all_current_invoice", type="array", @OA\Items(type="object"))
     *         )
     *     )
     * )
     */
     public function update(Request $request) {
-        $all_category_data = Category::select('id','name','description')->get();
-        $category = Category::find($request->id);
+        $all_invoice_data = Invoice::select('id', 'user_id', 'total')->get();
+        $invoice = Invoice::find($request->id);
 
-        if ($category != null) {
-            $category->name = $request->name;
-            $category->description = $request->description;
-            $category->save();
+        if ($invoice != null) {
+            $invoice->user_id = $request->user_id;
+            $invoice->total = $request->total;
+            $invoice->save();
             return response()->json([
                 'status' => 'Update Complete',
-                'updated_category' => $category,
+                'updated_invoice' => $invoice,
                 'status_code' => 200
             ]);
         } else {
             return response()->json([
-                'status' => 'Category not found',
+                'status' => 'Invoice not found',
                 'status_code' => 500,
-                'all_current_category' => $all_category_data
+                'all_current_invoice' => $all_invoice_data
             ]);
         }
     }
 
     /**
     * @OA\Post(
-    *     path="/api/category/delete",
-    *     summary="Delete a category",
-    *     tags={"Category"},
+    *     path="/api/invoice/delete",
+    *     summary="Delete an invoice",
+    *     tags={"Invoice"},
     *     @OA\RequestBody(
     *         required=true,
     *         @OA\JsonContent(
@@ -166,33 +166,33 @@ class CategoryController extends Controller
     *     ),
     *     @OA\Response(
     *         response=200,
-    *         description="Category deleted successfully",
+    *         description="Invoice deleted successfully",
     *         @OA\JsonContent(
     *             @OA\Property(property="status", type="string", example="Delete Complete"),
     *             @OA\Property(property="status_code", type="integer", example=200),
     *             @OA\Property(
-    *                 property="deleted_category",
+    *                 property="deleted_invoice",
     *                 type="object",
     *                 @OA\Property(property="id", type="integer"),
-    *                 @OA\Property(property="name", type="string"),
-    *                 @OA\Property(property="description", type="string")
+    *                 @OA\Property(property="user_id", type="integer"),
+    *                 @OA\Property(property="total", type="number", format="float")
     *             )
     *         )
     *     ),
     *     @OA\Response(
     *         response=500,
-    *         description="Category not found",
+    *         description="Invoice not found",
     *         @OA\JsonContent(
-    *             @OA\Property(property="status", type="string", example="Category not found"),
+    *             @OA\Property(property="status", type="string", example="Invoice not found"),
     *             @OA\Property(property="status_code", type="integer", example=500),
     *             @OA\Property(
-    *                 property="all_current_category",
+    *                 property="all_current_invoice",
     *                 type="array",
     *                 @OA\Items(
     *                     type="object",
     *                     @OA\Property(property="id", type="integer"),
-    *                     @OA\Property(property="name", type="string"),
-    *                     @OA\Property(property="description", type="string")
+    *                     @OA\Property(property="user_id", type="integer"),
+    *                     @OA\Property(property="total", type="number", format="float")
     *                 )
     *             )
     *         )
@@ -200,21 +200,21 @@ class CategoryController extends Controller
     * )
     */
     public function delete(Request $request) {
-        $category = Category::find($request->id);
-        $all_category = Category::select('id', 'name', 'description');
-        if ($category != null) {
-            $deleted_category = $category->only(['id','name','description']);
-            $category->delete();
+        $invoice = Invoice::find($request->id);
+        $all_invoice = Invoice::select('id', 'user_id', 'total');
+        if ($invoice != null) {
+            $deleted_invoice = $invoice->only(['id', 'user_id', 'total']);
+            $invoice->delete();
             return response()->json([
                 'status' => 'Delete Complete',
                 'status_code' => 200,
-                'deleted_category' => $deleted_category
+                'deleted_invoice' => $deleted_invoice
             ]);
         } else {
             return response()->json([
-                'status' => 'Category not found',
+                'status' => 'Invoice not found',
                 'status_code' => 500,
-                'all_current_category' => $all_category
+                'all_current_invoice' => $all_invoice
             ]);
         }
     }
